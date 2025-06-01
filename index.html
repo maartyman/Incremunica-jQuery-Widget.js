@@ -16,7 +16,7 @@
 <body>
   <header>
     <a class="logo" href="www.npmjs.com/package/@incremunica/query-sparql-incremental"><img src="images/logo.svg" alt="" /></a>
-    <h1><a href="#">Query the Web of dynamic Linked Data</a></h1>
+    <h1><a href="#">Query the Web of Dynamic Linked Data</a></h1>
     <p><a href="www.npmjs.com/package/@incremunica/query-sparql-incremental" target="_blank">Live in your browser, powered by Incremunica</a>.</p>
   </header>
   <!--[if lte IE 9]><b>Your browser is unsupported.</b><div style="display:none"><![endif]-->
@@ -54,6 +54,13 @@
         <li>
           <label>Type or pick a query</label>
           <select class="query"></select>
+
+          <div>
+            <ul class="query-texts">
+              <li><a id="sparql"><img src="images/sparql.png" alt="SPARQL" />SPARQL</a></li>
+              <li><a id="graphql"><img src="images/graphql.svg" alt="GraphQL" />GraphQL-LD</a></li>
+            </ul>
+          </div>
 
           <div class="query-text-containers">
             <div class="query-text-container" id="tab-sparql">
