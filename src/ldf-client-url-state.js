@@ -50,10 +50,12 @@ jQuery(function ($) {
       $queryui.queryui('option', 'queryContext', uiState.queryContext);
     if (uiState.resultsToTree)
       $queryui.queryui('option', 'resultsToTree', uiState.resultsToTree !== 'false');
-    if (uiState.datetime)
-      $queryui.queryui('option', 'datetime', uiState.datetime);
     if (uiState.httpProxy)
       $queryui.queryui('option', 'httpProxy', uiState.httpProxy);
+    if (uiState.polling)
+      $queryui.queryui('option', 'polling', uiState.polling);
+    if (uiState.deferred)
+      $queryui.queryui('option', 'deferred', uiState.deferred);
     if (uiState.bypassCache)
       $queryui.queryui('option', 'bypassCache', uiState.bypassCache);
     if (uiState.solidIdp)
@@ -82,10 +84,12 @@ jQuery(function ($) {
       queryString.push('resultsToTree=' + encodeURIComponent(options.resultsToTree));
     if (options.queryFormat !== 'sparql')
       queryString.push('queryFormat=' + encodeURIComponent(options.queryFormat || ''));
-    if (options.datetime)
-      queryString.push('datetime=' + encodeURIComponent(options.datetime));
     if (options.httpProxy)
       queryString.push('httpProxy=' + encodeURIComponent(options.httpProxy));
+    if (options.polling)
+      queryString.push('polling=' + encodeURIComponent(options.polling));
+    if (options.deferred)
+      queryString.push('deferred=' + encodeURIComponent(options.deferred));
     if (options.bypassCache)
       queryString.push('bypassCache=' + encodeURIComponent(options.bypassCache));
     if (options.solidIdp && options.solidAuth.defaultIdp !== options.solidIdp)

@@ -5,15 +5,11 @@ var SparqlParser = require('sparqljs').Parser;
 var SparqlGenerator = require('sparqljs').Generator;
 // This exports the webpacked jQuery.
 window.jQuery = require('../deps/jquery-2.1.0.js');
-var N3 = require('n3');
-var RdfString = require('rdf-string');
 var resolve = require('relative-to-absolute-iri').resolve;
 var solidAuth = require('@rubensworks/solid-client-authn-browser');
 
 // This exports map-related dependencies
 var L = require('leaflet');
-var turf = require('@turf/centroid');
-var Wkt = require('wicket/wicket-leaflet');
 
 // Comment out the following two lines if you want to disable YASQE
 var YASQE = require('yasgui-yasqe/src/main.js');
@@ -26,10 +22,30 @@ require('leaflet/dist/images/layers-2x.png');
 require('leaflet/dist/images/marker-icon.png');
 require('leaflet/dist/images/marker-icon-2x.png');
 require('leaflet/dist/images/marker-shadow.png');
+const { FastScroller } = require('../deps/fast-scroller');
 
 // Polyfill process for readable-stream when it is not defined
 if (typeof global.process === 'undefined')
   global.process = require('process');
+
+function bindingsToCompactString(bindings) {
+  let hash = '';
+  for (const term of Object.values(bindings)) {
+    if (term)
+      hash += '<' + term;
+  }
+
+  return hash;
+}
+
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 (function ($) {
   // Query UI main entry point, which mimics the jQuery UI widget interface:
@@ -107,9 +123,10 @@ if (typeof global.process === 'undefined')
           $resultsText = $('<div>', { class: 'text' }),
           $errorBanner = this.$errorBanner = $('.error-banner', $element),
           $datasources = this.$datasources = $('.datasources', $element),
-          $datetime = this.$datetime = $('.datetime', $element),
           $httpProxy = this.$httpProxy = $('.httpProxy', $element),
-          $bypassCache = this.$bypassCache = $('.bypassCache', $element),
+          $polling = this.$polling = $('.polling', $element),
+          $deferred = this.$deferred = $('.deferred', $element),
+          $deferredTrigger = $('.deferred-trigger', $element),
           $solidIdp = this.$solidIdp = $('.solid-auth .idp', $element),
           $showDetails = this.$showDetails = $('.details-toggle', $element),
           $proxyDefault = $('.proxy-default', $element);
@@ -223,14 +240,21 @@ if (typeof global.process === 'undefined')
         }
       });
 
-      // Update datetime on change
-      $datetime.change(function () { self._setOption('datetime', $datetime.val()); });
-
       // Update http proxy on change
       $httpProxy.change(function () { self._setOption('httpProxy', $httpProxy.val()); });
 
-      // Update bypass cache on change
-      $bypassCache.change(function () { self._setOption('bypassCache', $bypassCache.is(':checked')); });
+      // Update polling value on change
+      $polling.change(function () { self._setOption('polling', $polling.val()); });
+
+      // Update deferred eval on change
+      $deferred.change(function () { self._setOption('deferred', $deferred.is(':checked')); });
+      $deferredTrigger.on('click', function () {
+        if (self._queryWorker) {
+          self._queryWorker.postMessage({
+            type: 'deferredTrigger',
+          });
+        }
+      });
 
       // Update IDP on change
       $solidIdp.change(function () { self._setOption('solidIdp', $solidIdp.val()); });
@@ -247,7 +271,7 @@ if (typeof global.process === 'undefined')
       // Set up results
       $results.append($resultsText);
       $errorBanner.hide();
-      this._resultsScroller = new FastScroller($results, renderResult);
+      this._resultsScroller = new FastScroller(document.getElementsByClassName('results')[0], renderResult);
       this._resultAppender = appenderFor($resultsText);
       this._logAppender = appenderFor($log);
       this._errorAppender = appenderFor($errorBanner);
@@ -262,6 +286,40 @@ if (typeof global.process === 'undefined')
       // Apply all options
       for (var key in options)
         this._setOption(key, options[key], true);
+
+      let previousSources = new Set();
+      ($datasources.val() || []).forEach(function (datasource) {
+        previousSources.add(datasource);
+      });
+      $datasources.change(() => {
+        const newSources = new Set();
+        (this.$datasources.val() || []).forEach(function (datasource) {
+          newSources.add(datasource);
+        });
+
+        if (this.$stop.is(':visible')) {
+          const added = newSources.keys().filter(value => !previousSources.has(value));
+          const removed = previousSources.keys().filter(value => !newSources.has(value));
+
+          added.forEach(dataSource => {
+            this._queryWorker.postMessage({
+              type: 'dataSource',
+              isAddition: true,
+              value: dataSource,
+            });
+          });
+
+          removed.forEach(dataSource => {
+            this._queryWorker.postMessage({
+              type: 'dataSource',
+              isAddition: false,
+              value: dataSource,
+            });
+          });
+        }
+
+        previousSources = newSources;
+      });
     },
 
     // Sets a specific widget option
@@ -517,18 +575,10 @@ if (typeof global.process === 'undefined')
         });
         this._loadQueries(options.selectedDatasources);
         break;
-      case 'datetime':
-        if (value)
-          this._showDetails();
-        this.$datetime.val(value).change();
-        break;
       case 'httpProxy':
         if (value)
           this._showDetails();
         this.$httpProxy.val(value).change();
-        break;
-      case 'bypassCache':
-        this.$bypassCache.prop('checked', value).change();
         break;
       // Set the list of selectable queries
       case 'relevantQueries':
@@ -572,6 +622,14 @@ if (typeof global.process === 'undefined')
             self._setOption(key, settings[key]);
           self.element.trigger('settingsUpdated');
         });
+        break;
+      case 'polling':
+        if (value)
+          this._showDetails();
+        this.$polling.val(value).change();
+        break;
+      case 'deferred':
+        this.$deferred.prop('checked', value).change();
         break;
       }
     },
@@ -688,8 +746,6 @@ if (typeof global.process === 'undefined')
     // Starts query execution
     _startExecution: function () {
       var datasources = this.$datasources.val() || [];
-      if (!datasources.length && !this.$allowNoSources)
-        return alert('Please choose a datasource to execute the query.');
 
       // Hide and clear map
       if (this.$mapWrapper) {
@@ -701,7 +757,7 @@ if (typeof global.process === 'undefined')
       // Clear results and log
       this.$stop.show();
       this.$start.hide();
-      this._resultsScroller.removeAll();
+      this._resultsScroller.clearAll();
       this._resultAppender.clear();
       this._logAppender.clear();
       this._errorAppender.clear();
@@ -751,9 +807,10 @@ if (typeof global.process === 'undefined')
     _getQueryContext: function () {
       var context = {
         ...(this.$contextDefault || {}),
-        datetime: parseDate(this.options.datetime),
         queryFormat: this.options.queryFormat,
         httpProxy: this.options.httpProxy,
+        pollingPeriod: this.options.polling,
+        deferredEval: this.options.deferred,
         workerSolidAuth: !!this.$solidSession,
       };
       if (this.options.queryContext) {
@@ -811,27 +868,42 @@ if (typeof global.process === 'undefined')
       switch (queryType) {
       // For SELECT queries, add the rows to the result
       case 'bindings':
-        this._writeResult = function (row) {
-          this._resultsScroller.addContent([row]);
+        const buffer = [];
+        let timer = null;
+        const FLUSH_INTERVAL = 50;
+        const MAX_BUFFER_SIZE = 100;
+
+        const flush = () => {
+          if (buffer.length > 0)
+            this._resultsScroller.handle(buffer.splice(0, buffer.length));
+          clearTimeout(timer);
+          timer = null;
+        };
+
+        this._writeResult = function (row, isAddition, index) {
+          const uid = Date.now().toString(36) + Math.random().toString(36).slice(2);
+          const obj = {
+            hash: bindingsToCompactString(row),
+            data: row,
+            isAddition,
+            uid,
+            index,
+          };
+
+          buffer.push(obj);
+
+          if (buffer.length >= MAX_BUFFER_SIZE)
+            flush();
+          else {
+            // Refresh the timer every time
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(flush, FLUSH_INTERVAL);
+          }
         };
         this._writeEnd = function () {
           if (!this._resultCount)
             resultAppender('This query has no results.');
         };
-        break;
-      // For CONSTRUCT and DESCRIBE queries,
-      // write a Turtle representation of the triples
-      case 'quads':
-        var streamWriter = new N3.StreamWriter(this.options)
-          .on('data', resultAppender)
-          .on('error', (err) => { throw err; });
-        this._writeResult = function (triple) { streamWriter.write(RdfString.stringQuadToQuad(triple)); };
-        this._writeEnd = function () { streamWriter.end(); };
-        break;
-      // For ASK queries, write whether an answer exists
-      case 'boolean':
-        this._writeResult = function (exists) { resultAppender(exists); };
-        this._writeEnd = $.noop;
         break;
       // Other queries cannot be displayed
       default:
@@ -840,85 +912,20 @@ if (typeof global.process === 'undefined')
     },
 
     // Adds a result to the display
-    _addResult: function (result) {
+    _addResult: function (result, index) {
       if (this._writeResult) {
         this._resultCount++;
-        this._writeResult(result);
-
-        if (this.map)
-          this._handleGeospatialResult(result);
+        index = index ?? -1;
+        this._writeResult(result, true, index);
       }
     },
-    _processMapData: function () {
-      var self = this;
-      const resultsToProcess = this._mapResultsBuffer.splice(0);
-      for (const bindings of resultsToProcess) {
-        for (const variableName in bindings) {
-          // Check if the value has a geospatial datatype
-          const value = bindings[variableName];
-          if (value.endsWith('^^http://www.openlinksw.com/schemas/virtrdf#Geometry') ||
-            value.endsWith('^^http://www.opengis.net/ont/geosparql#wktLiteral')) {
-            // Look for a corresponding variable with the 'Label' suffix.
-            const variableNameLabel = `${variableName}Label`;
-            const valueLabel = bindings[variableNameLabel];
 
-            // Interpret geometry value as WKT string
-            const geometry = /^"(.*)"\^\^[^\^]*$/.exec(value)[1];
-            const wkt = new Wkt.Wkt();
-            wkt.read(geometry);
-
-            // Construct geo feature for WKT string
-            const geoFeature = { type: 'Feature', properties: {}, geometry: wkt.toJson() };
-            if (valueLabel)
-              geoFeature.properties.name = valueLabel.split('@', 1)[0].replace(/['"]+/g, '');
-
-            // Add feature to map
-            let newMapLayer = L.geoJSON(geoFeature, {
-              onEachFeature: function (feature) {
-                // Determine marker position for different geometry types
-                let lon;
-                let lat;
-                if (feature.geometry.type === 'Polygon') {
-                  const centroid = turf.centroid(feature);
-                  lon = centroid.geometry.coordinates[0];
-                  lat = centroid.geometry.coordinates[1];
-                }
-                // Handle points
-                if (feature.geometry.type === 'Point') {
-                  lon = feature.geometry.coordinates[0];
-                  lat = feature.geometry.coordinates[1];
-                }
-                if (lon && lat) {
-                  let marker = L.circleMarker([lat, lon]);
-                  self.mapLayer.addLayer(marker).addTo(self.map);
-                  self.markerArray.push(marker);
-                  if (valueLabel)
-                    marker.bindPopup(feature.properties.name);
-                }
-              },
-            });
-            self.mapLayer.addLayer(newMapLayer).addTo(self.map);
-
-            // Possibly rescale map view
-            self.map.fitBounds(L.featureGroup(self.markerArray).getBounds());
-
-            // Show map if it's not visible yet
-            if (!self.$mapWrapper.is(':visible'))
-              self.$mapWrapper.show();
-          }
-        }
-      }
-      this._processingScheduled = false;
-    },
-
-    // If the given result contains geospatial data, show it on the map
-    _handleGeospatialResult: function (bindings) {
-      if (!this._mapResultsBuffer) this._mapResultsBuffer = [];
-      this._mapResultsBuffer.push(bindings);
-
-      if (!this._processingScheduled) {
-        this._processingScheduled = true;
-        requestAnimationFrame(this._processMapData.bind(this));
+    // Adds a result to the display
+    _removeResult: function (result, index) {
+      if (this._writeResult) {
+        this._resultCount--;
+        index = index ?? -1;
+        this._writeResult(result, false, index);
       }
     },
 
@@ -995,13 +1002,15 @@ if (typeof global.process === 'undefined')
         var data = message.data;
         switch (data.type) {
         case 'queryInfo': return self._initResults(data.queryType);
-        case 'result':    return self._addResult(data.result);
+        case 'addition':  return self._addResult(data.result, data.index);
+        case 'deletion':  return self._removeResult(data.result, data.index);
         case 'end':       return self._endResults();
         case 'log':       return self._logAppender(data.log);
         case 'error':     return this.onerror(data.error);
         case 'webIdName': return self._setWebIdName(data.name);
         }
       };
+
       this._queryWorker.onerror = function (error) {
         self._stopExecution(error);
       };
@@ -1093,20 +1102,25 @@ if (typeof global.process === 'undefined')
     return hash;
   }
 
-  // Parses a yyyy-mm-dd date string into a Date
-  function parseDate(date) {
-    if (date) {
-      try { return new Date(Date.parse(date)); }
-      catch (e) { /* ignore invalid dates */ }
-    }
-  }
+  function renderResult(row) {
+    const container = document.createElement('div');
+    container.className = 'result';
 
-  // Transforms a result row into an HTML element
-  function renderResult(row, container) {
-    container = container || $('<div>', { class: 'result' }).append($('<dl>'))[0];
-    $(container.firstChild).empty().append($.map(row, function (value, variable) {
-      return [$('<dt>', { text: variable }), $('<dd>', { html: escape(value) })];
-    }));
+    const dl = document.createElement('dl');
+
+    for (const [variable, value] of Object.entries(row)) {
+      const dt = document.createElement('dt');
+      dt.textContent = variable;
+
+      const dd = document.createElement('dd');
+      dd.innerHTML = escapeHTML(value);
+
+      dl.appendChild(dt);
+      dl.appendChild(dd);
+    }
+
+    container.appendChild(dl);
+
     return container;
   }
 

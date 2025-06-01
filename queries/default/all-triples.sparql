@@ -1,5 +1,4 @@
-# Show 100 triples
+# Show all triples
 SELECT * WHERE {
   ?s ?p ?o.
 }
-LIMIT 100

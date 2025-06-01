@@ -1,29 +1,21 @@
 {
   "queryFormats": {
     "sparql": true,
-    "graphql": true
+    "graphql": false
   },
-  "allowNoSources": false,
+  "allowNoSources": true,
   "branding": {
-    "title": "Query the Web of Linked Data",
-    "title_href": "https://comunica.dev/",
-    "subtitle": "Live in your browser, powered by Comunica",
-    "subtitle_href": "https://comunica.dev/",
-    "page_title": "Comunica Web client"
-  },
-  "map": {
-    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    "attribution": "Map data &copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>"
+    "title": "Query the Dynamic Web of Linked Data",
+    "title_href": "https://www.npmjs.com/package/@incremunica/query-sparql-incremental",
+    "subtitle": "Live in your browser, powered by Incremunica",
+    "subtitle_href": "https://www.npmjs.com/package/@incremunica/query-sparql-incremental",
+    "page_title": "Incremunica Web client"
   },
   "solidAuth": {
     "settingsOnly": true,
     "defaultIdp": "https://login.inrupt.com/"
   },
   "datasources": [
-    {
-      "name": "DBpedia 2016-04",
-      "url": "//fragments.dbpedia.org/2016-04/en"
-    },
     {
       "name": "Ruben Verborgh's Profile",
       "url": "https://ruben.verborgh.org/profile/"
@@ -33,48 +25,8 @@
       "url": "https://www.rubensworks.net/"
     },
     {
-      "name": "DBpedia SPARQL",
-      "url": "https://dbpedia.org/sparql"
-    },
-    {
-      "name": "DBpedia 2015-10",
-      "url": "//fragments.dbpedia.org/2015-10/en"
-    },
-    {
-      "name": "DBpedia 2015-04",
-      "url": "//fragments.dbpedia.org/2015/en"
-    },
-    {
-      "name": "DBpedia 2014",
-      "url": "//fragments.dbpedia.org/2014/en"
-    },
-    {
-      "name": "Ghent University Academic Bibliography",
-      "url": "//data.linkeddatafragments.org/ugent-biblio"
-    },
-    {
-      "name": "Linked Open Vocabularies",
-      "url": "//data.linkeddatafragments.org/lov"
-    },
-    {
-      "name": "Virtual International Authority File (VIAF)",
-      "url": "//data.linkeddatafragments.org/viaf"
-    },
-    {
-      "name": "Harvard Library",
-      "url": "//data.linkeddatafragments.org/harvard"
-    },
-    {
-      "name": "Between Our Worlds 2018-06",
-      "url": "https://data.betweenourworlds.org/2018-06"
-    },
-    {
-      "name": "Wikidata",
-      "url": "https://query.wikidata.org/bigdata/ldf"
-    },
-    {
-      "name": "SNCB",
-      "url": "https://graph.irail.be/sncb/connections"
+      "name": "User 1 profile on SolidLab Pod Playground",
+      "url": "https://pod.playground.solidlab.be/user1/profile/card#me"
     }
   ],
   "prefixes": {

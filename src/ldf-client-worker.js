@@ -5,6 +5,10 @@ var bindingsStreamToGraphQl = require('@comunica/actor-query-result-serialize-tr
 var ProxyHandlerStatic = require('@comunica/actor-http-proxy').ProxyHandlerStatic;
 var WorkerToWindowHandler = require('@rubensworks/solid-client-authn-browser').WorkerToWindowHandler;
 var QueryEngineBase = require('@comunica/actor-init-query').QueryEngineBase;
+var isAddition = require('@incremunica/user-tools').isAddition;
+var getBindingsIndex = require('@incremunica/user-tools').getBindingsIndex;
+var QuerySourceIterator = require('@incremunica/user-tools').QuerySourceIterator;
+var DeferredEvaluation = require('@incremunica/user-tools').DeferredEvaluation;
 
 // The active fragments client and the current results
 var resultsIterator;
@@ -18,14 +22,26 @@ logger.log = function (level, color, message, data) {
 // Handler for authenticating fetch requests within main window
 const workerToWindowHandler = new WorkerToWindowHandler(self);
 
+var querySourceIterator = null;
+var deferredEvaluation = null;
+
 function initEngine(config) {
   // Create an engine lazily
   if (!engine)
     engine = new QueryEngineBase(require('my-comunica-engine')());
 
+  config.context.pollingPeriod = parseInt(config.context.pollingPeriod, 10) || 10;
+
   // Set up a proxy handler
   if (config.context.httpProxy)
     config.context.httpProxyHandler = new ProxyHandlerStatic(config.context.httpProxy);
+
+  // Set up a deferred eval trigger
+  if (config.context.deferredEval) {
+    deferredEvaluation = new DeferredEvaluation();
+    config.context.deferredEvaluationTrigger = deferredEvaluation.events;
+    delete config.context.deferredEval;
+  }
 
   // Set up authenticated fetch
   if (config.context.workerSolidAuth)
@@ -34,6 +50,13 @@ function initEngine(config) {
   // Transform query format to expected structure
   if (config.context.queryFormat)
     config.context.queryFormat = { language: config.context.queryFormat };
+
+  querySourceIterator = new QuerySourceIterator({
+    seedSources: config.context.sources,
+    deletionCooldown: 500,
+    distinct: true,
+  });
+  config.context.sources = [querySourceIterator];
 }
 
 // Handlers of incoming messages
@@ -77,7 +100,10 @@ var handlers = {
             bindingsStreamToGraphQl(resultsIterator, result.context, { materializeRdfJsTerms: true })
               .then(function (results) {
                 (Array.isArray(results) ? results : [results]).forEach(function (result) {
-                  postMessage({ type: 'result', result: { result: '\n' + JSON.stringify(result, null, '  ') } });
+                  if (isAddition(result))
+                    postMessage({ type: 'addition', result: { result: '\n' + JSON.stringify(result, null, '  ') } });
+                  else
+                    postMessage({ type: 'deletion', result: { result: '\n' + JSON.stringify(result, null, '  ') } });
                 });
                 postMessage({ type: 'end' });
               })
@@ -85,11 +111,15 @@ var handlers = {
           }
           else {
             resultsIterator.on('data', function (result) {
+              let resultMessage = {
+                type: isAddition(result) ? 'addition' : 'deletion',
+              };
+              resultMessage.index = getBindingsIndex(result);
               if (bindings)
-                result = Object.fromEntries([...result].map(([key, value]) => [RdfString.termToString(key), RdfString.termToString(value)]));
+                resultMessage.result = Object.fromEntries([...result].map(([key, value]) => [RdfString.termToString(key), RdfString.termToString(value)]));
               else
-                result = RdfString.quadToStringQuad(result);
-              postMessage({ type: 'result', result: result });
+                resultMessage.result = RdfString.quadToStringQuad(result);
+              postMessage(resultMessage);
             });
             resultsIterator.on('end', function () {
               postMessage({ type: 'end' });
@@ -100,11 +130,35 @@ var handlers = {
       }).catch(postError);
   },
 
+  // Add or remove a data source
+  dataSource: function ({ isAddition, value }) {
+    if (querySourceIterator) {
+      if (isAddition)
+        querySourceIterator.addSource(value);
+      else
+        querySourceIterator.removeSource(value);
+    }
+    else
+      postError(new Error('No data source available'));
+  },
+
+  // Trigger the deferred evaluation
+  deferredTrigger: function () {
+    if (deferredEvaluation)
+      deferredEvaluation.triggerUpdate();
+    else
+      postError(new Error('Deferred evaluation not set'));
+  },
+
   // Stop the execution of the current query
   stop: function () {
     if (resultsIterator) {
       resultsIterator.destroy();
       resultsIterator = null;
+    }
+    if (querySourceIterator) {
+      querySourceIterator.destroy();
+      querySourceIterator = null;
     }
   },
 

@@ -138,14 +138,14 @@ select {
   float: right;
 }
 
-input.datetime, input.httpProxy, input.idp {
+input.httpProxy, input.idp, input.polling {
   float: right;
   font-size: 13px;
   border: 1px solid #999999;
   border-radius: 3px;
 }
 
-input.httpProxy {
+input.httpProxy, input.polling {
   width: 340px;
   height: 23px;
   margin-left: 2px;
@@ -181,6 +181,19 @@ input.idp, .webid {
   padding: 4px;
   width: 76px;
   float: right;
+}
+
+.deferred {
+  margin: 0;
+  font-size: 12px;
+  padding: 4px;
+  width: 76px;
+}
+
+.deferred-trigger {
+  font-size: 12px;
+  padding: 4px;
+  width: 150px;
 }
 
 .details {
@@ -390,7 +403,7 @@ footer {
   select {
     width: 350px;
   }
-  .chosen, input.datetime, input.httpProxy, input.idp, input.bypassCache {
+  .chosen, input.httpProxy, input.idp, input.bypassCache, input.deferred, input.polling {
     float: none;
     margin-bottom: 0;
   }

@@ -5,11 +5,11 @@ const webpack = require('webpack');
 let pathToComunica;
 let comunicaOverride;
 try {
-  pathToComunica = require.resolve('@comunica/query-sparql', { paths: [process.cwd()] });
+  pathToComunica = require.resolve('@incremunica/query-sparql-incremental', { paths: [process.cwd()] });
   comunicaOverride = true;
 }
 catch {
-  pathToComunica = require.resolve('@comunica/query-sparql', { paths: [__dirname] });
+  pathToComunica = require.resolve('@incremunica/query-sparql-incremental', { paths: [__dirname] });
   comunicaOverride = false;
 }
 
@@ -39,7 +39,7 @@ module.exports = [
       path.join(__dirname, './images/logo.svg'),
       path.join(__dirname, './images/settings.svg'),
       path.join(__dirname, './images/sparql.png'),
-      path.join(__dirname, './favicon.ico'),
+      path.join(__dirname, './images/favicon.png'),
       path.join(__dirname, './solid-client-id.jsonld'),
       path.join(process.cwd(), './queries.json'),
     ],

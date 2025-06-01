@@ -3,18 +3,21 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Comunica Web client</title>
+  <title>Incremunica Web client</title>
   <link rel=stylesheet href="styles/yasqe.css">
   <link rel=stylesheet href="styles/leaflet.css"/>
   <link rel=stylesheet href="styles/ldf-client.css">
   <link rel=stylesheet href="//fonts.googleapis.com/css?family=Open+Sans:300,400italic,700italic,400,700">
   <meta name="viewport" content="width=device-width,minimum-scale=1,maximum-scale=1">
+  <!-- Favicon -->
+  <link rel="icon" href="images/favicon/favicon.ico" type="image/x-icon">
+  <link rel="manifest" href="images/favicon/site.webmanifest">
 </head>
 <body>
   <header>
-    <a class="logo" href="https://comunica.dev/"><img src="images/logo.svg" alt="" /></a>
-    <h1><a href="#">Query the Web of Linked Data</a></h1>
-    <p><a href="https://comunica.dev/" target="_blank">Live in your browser, powered by Comunica</a>.</p>
+    <a class="logo" href="www.npmjs.com/package/@incremunica/query-sparql-incremental"><img src="images/logo.svg" alt="" /></a>
+    <h1><a href="#">Query the Web of dynamic Linked Data</a></h1>
+    <p><a href="www.npmjs.com/package/@incremunica/query-sparql-incremental" target="_blank">Live in your browser, powered by Incremunica</a>.</p>
   </header>
   <!--[if lte IE 9]><b>Your browser is unsupported.</b><div style="display:none"><![endif]-->
   <main>
@@ -27,7 +30,15 @@
               <option class="extra-information" value="">Select a preset datasource, or type a custom URL</option>
             </select>
         </li>
-
+        <li class="details">
+          <label>Set polling period</label>
+          <input class="polling" type="number" value=10>
+        </li>
+        <li class="details">
+          <label>Use deferred evaluation</label>
+          <input class="deferred" type="checkbox">
+          <button class="deferred-trigger">trigger update</button>
+        </li>
         <li class="details solid-auth">
           <label>Solid authentication</label>
           <input class="idp" type="text" placeholder="Identity provider">
@@ -35,17 +46,9 @@
           <button class="login" disabled="true">Log in</button>
         </li>
         <li class="details">
-          <label>Pick a date</label>
-          <input class="datetime" type="date">
-        </li>
-        <li class="details">
           <label>Set a HTTP proxy</label>
           <input class="httpProxy" type="text">
           <button class="proxy-default">Set default</button>
-        </li>
-        <li class="details">
-          <label>Bypass cache</label>
-          <input class="bypassCache" type="checkbox">
         </li>
 
         <li>
@@ -81,11 +84,6 @@
           <button class="start">Execute query</button>
           <button class="stop" style="display:none">Stop execution</button>
           <span class="timing"></span>
-        </li>
-
-        <li class="results-map-wrapper">
-          <label>Geospatial results</label>
-          <div class="results-map"></div>
         </li>
 
         <li>
