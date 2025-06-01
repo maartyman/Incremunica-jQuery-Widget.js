@@ -54,7 +54,8 @@ if (args.h || args.help || args._.length > 1) {
     // Compile Web version
     const destinationPath = args.d || 'build';
     const mode = args.m || 'production';
-    const baseURL = args.b || 'https://query.linkeddatafragments.org/';
+    const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+    const baseURL = args.b || settings.pageURL || 'https://query.linkeddatafragments.org/';
     const webpackConfig = require(args.w ? path.resolve(process.cwd(), args.w) : '../webpack.config.js');
 
     // Override the baseURL in the webpack config

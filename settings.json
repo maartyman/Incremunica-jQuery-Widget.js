@@ -13,8 +13,9 @@
   },
   "solidAuth": {
     "settingsOnly": true,
-    "defaultIdp": "https://login.inrupt.com/"
+    "defaultIdp": "https://pod.playground.solidlab.be/"
   },
+  "pageURL": "https://maartyman.github.io/Incremunica-jQuery-Widget.js/",
   "datasources": [
     {
       "name": "Ruben Verborgh's Profile",
