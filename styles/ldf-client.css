@@ -314,6 +314,8 @@ textarea {
 .query-text-containers {
   display: block;
   clear: both;
+  margin-top: .6em;
+  border-top: #999 1px solid;
 }
 
 .query-texts li {
