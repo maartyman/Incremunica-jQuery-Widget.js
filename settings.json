@@ -15,7 +15,7 @@
     "settingsOnly": true,
     "defaultIdp": "https://pod.playground.solidlab.be/"
   },
-  "pageURL": "https://maartyman.github.io/Incremunica-jQuery-Widget.js/",
+  "pageURL": "https://maartyman.github.io/Incremunica-Client/",
   "datasources": [
     {
       "name": "Ruben Verborgh's Profile",

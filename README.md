@@ -1,7 +1,7 @@
 # Incremunica SPARQL jQuery Widget
 [<img src="https://github.com/user-attachments/assets/8b41f58a-dd43-4555-8b1f-29f0dfd5b736" width="200" align="right" alt="" />](https://github.com/comunica/incremunica/)
 
-**[Try the _Incremunica SPARQL jQuery Widget_ online.](https://maartyman.github.io/Incremunica-jQuery-Widget.js/)**
+**[Try the _Incremunica SPARQL jQuery Widget_ online.](https://maartyman.github.io/Incremunica-Client/)**
 
 This is a modified version of the [comunica jQuery widget](https://github.com/comunica/jQuery-Widget.js) to use the [Incremunica SPARQL client](https://github.com/comunica/incremunica/tree/master/engines/query-sparql-incremental) and allow for incremental updates of the query results.
 
