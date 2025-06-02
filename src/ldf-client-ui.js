@@ -10,6 +10,7 @@ var solidAuth = require('@rubensworks/solid-client-authn-browser');
 
 // This exports map-related dependencies
 var L = require('leaflet');
+var datasourcesChangeFunction = null;
 
 // Comment out the following two lines if you want to disable YASQE
 var YASQE = require('yasgui-yasqe/src/main.js');
@@ -291,7 +292,7 @@ function escapeHTML(str) {
       ($datasources.val() || []).forEach(function (datasource) {
         previousSources.add(datasource);
       });
-      $datasources.change(() => {
+      datasourcesChangeFunction = () => {
         const newSources = new Set();
         (this.$datasources.val() || []).forEach(function (datasource) {
           newSources.add(datasource);
@@ -319,7 +320,8 @@ function escapeHTML(str) {
         }
 
         previousSources = newSources;
-      });
+      };
+      $datasources.change(datasourcesChangeFunction);
     },
 
     // Sets a specific widget option
@@ -502,6 +504,8 @@ function escapeHTML(str) {
           return exists === 'default' ? null :
             $('<option>', { text: url, value: url, selected: true });
         })).trigger('chosen:updated');
+        if (datasourcesChangeFunction)
+          datasourcesChangeFunction();
         // Update the query set
         this._loadQueries(value);
         break;
